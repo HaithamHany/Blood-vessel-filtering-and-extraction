@@ -1,13 +1,17 @@
+% Read Train Image
 I_Original = imread('21_training.tif');
 if size(I_Original, 3) == 3
     I = rgb2gray(I_Original); % Convert to grayscale if the image is RGB
 end
 
+% Read ground truth image
+GT = imread('21_groundtruth.gif');
+GT = GT(:,:,1); % In case the ground truth is RGB, take one channel 
+
 % Contrast Enhancement using Adaptive Histogram Equalization
 I_uint8 = im2uint8(I); % Convert to uint8 for adapthisteq
 I_enhanced_uint8 = adapthisteq(I_uint8,'ClipLimit',0.007); 
 I = im2double(I_enhanced_uint8); % Convert back to double for further processing
-
 
 % Parameters for filters
 s = 0.5; % Scale for Gaussian
@@ -25,7 +29,6 @@ vessel_enhanced_MF = response_MF - background;
 %Apply FDOG filter
 fdog = fdog_filter(s);
 response_FDOG = conv2(I, fdog, 'same');
-
 
 % Background subtraction for FDOG
 se = strel('disk', 15);
@@ -65,6 +68,9 @@ binary_MF_FDOG_clean = bwareaopen(binary_MF_FDOG, P);
 binary_MF_closed = imclose(binary_MF_clean, se);
 binary_MF_FDOG_closed = imclose(binary_MF_FDOG_clean, se);
 
+% Call ground truth function to calculate metrics
+[resultsTable, f] = ground_truth(binary_MF_FDOG_closed, GT);
+
 % Display results
 figure;
 subplot(3,2,1), imshow(I_Original, []), title('Original Image');
@@ -73,8 +79,6 @@ subplot(3,2,3), imshow(vessel_enhanced_FDOG, []), title('Response by FDOG');
 subplot(3,2,4), imshow(binary_MF_closed, []), title('Thresholded MF Response');
 subplot(3,2,5), imshow(binary_MF_FDOG_closed, []), title('Final Vessel Map MF-FDOG');
 subplot(3,2,6), imshow(GT, []), title('Ground Truth Vessel Map');
-
-ground_truth(binary_MF_FDOG_closed)
 
 function f = gaussian_matched_filter(s, L)
     
@@ -100,9 +104,7 @@ function f = fdog_filter(s)
     f = -(x/(sqrt(2*pi)*s^3)) .* exp(-x.^2/(2*s^2));
 end
 
-function f = ground_truth(binary_MF_FDOG_closed)
-    GT = imread('21_groundtruth.gif');
-    GT = GT(:,:,1); % In case the ground truth is RGB, take one channel 
+function [resultsTable, f] = ground_truth(binary_MF_FDOG_closed, GT)
     % Check if the ground truth image needs thresholding
     if ~islogical(GT)
         GT_binary = GT > 128; % Thresholding condition if GT is not already binary
