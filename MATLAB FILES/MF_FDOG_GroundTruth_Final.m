@@ -115,7 +115,7 @@ function f = ground_truth(binary_MF_FDOG)
     GT_binary = logical(GT_binary);
     
      % Apply morphological closing to the binary image to connect fragmented vessels
-    se = strel('disk', 1); % You can adjust the size of the structuring element as needed
+    se = strel('disk', 1);
     binary_MF_FDOG_closed = imclose(binary_MF_FDOG, se);
     
     % Compare your final vessel map with the ground truth
